@@ -1,0 +1,39 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Spell Checker</title>
+    <style>
+        .misspelled {
+            color: red;
+            text-decoration: underline;
+        }
+
+        .spelling-tooltip {
+            display: none;
+            background-color: #f8d7da;
+            color: #721c24;
+            border: 1px solid #f5c6cb;
+            padding: 5px;
+            font-size: 0.9em;
+            position: absolute;
+            margin-top: 5px;
+            margin-left: 5px;
+        }
+    </style>
+</head>
+<body>
+
+    <div>
+        <label for="search-input">Enter text:</label>
+        <input type="text" id="search-input" />
+    </div>
+    
+    <!-- <div id="spelling-suggestions"></div>
+
+     Link to the external JavaScript file 
+     <script src="{{ url_for('static', filename='js/check_spelling.js') }}"></script> -->
+
+</body>
+</html> 

@@ -1,0 +1,28 @@
+{% extends 'layout.html' %}
+
+{% block title %}Text Search Engine - Home{% endblock %}
+
+{% block content %}
+<div class="hero">
+    <h1>Keyword-Based Search Engine</h1>
+    <p>Keyword-Based Search Engine for Text Documents</p>
+    
+    <div class="search-container">
+        <form action="{{ url_for('search') }}" method="get" id="search-form">
+            <div class="search-input-container">
+                <input 
+                    type="text" 
+                    name="q" 
+                    id="search-input" 
+                    placeholder="Enter keywords or phrases to search..." 
+                    autocomplete="off"
+                >
+            </div>
+            <button type="submit" class="btn btn-primary">
+                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
+                Search
+            </button>
+        </form>
+    </div>
+</div>
+{% endblock %}

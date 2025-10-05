@@ -1,0 +1,382 @@
+{% extends 'layout.html' %}
+
+{% block title %}Search Results{% endblock %}
+
+{% block content %}
+<div class="search-results-page">
+    <div class="search-header">
+        <form action="{{ url_for('search') }}" method="get" class="search-form-compact">
+            <div class="search-input-container">
+                <input 
+                    type="text" 
+                    name="q" 
+                    id="search-input" 
+                    placeholder="Enter keywords or phrases to search..." 
+                    value="{{ query }}"
+                    autocomplete="off"
+                >
+                <div id="spelling-suggestions" class="spelling-suggestions"></div>
+            </div>
+            <button type="submit" class="btn btn-primary">
+                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
+                Search
+            </button>
+        </form>
+    </div>
+
+    {% if results %}
+        <h2>Search Results ({{ results|length }})</h2>
+        <div class="results-list">
+            {% for result in results %}
+                <div class="result-card">
+                    <div class="result-header">
+                        <h3>{{ result.original_filename }}</h3>
+                        <div class="result-actions">
+                            <a href="{{ url_for('view_document', document_id=result.id) }}" class="btn btn-sm" target="_blank">
+                                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path><circle cx="12" cy="12" r="3"></circle></svg>
+                                View
+                            </a>
+                            <a href="{{ url_for('download_document', document_id=result.id) }}" class="btn btn-sm">
+                                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="7 10 12 15 17 10"></polyline><line x1="12" y1="15" x2="12" y2="3"></line></svg>
+                                Download
+                            </a>
+                        </div>
+                    </div>
+                    <p class="result-meta">
+                        Uploaded by {{ result.username or 'Anonymous' }} on 
+                        {{ result.upload_date.split(' ')[0] }}
+                    </p>
+                    
+                    {% if result.snippet %}
+                        <div class="result-snippet">
+                            {{ result.snippet | highlight_search_terms(query.split()) | safe }}
+                        </div>
+                    {% endif %}
+                    
+                    <div class="result-relevance">
+                        Relevance score: {{ result.relevance }}
+                    </div>
+                </div>
+            {% endfor %}
+        </div>
+    {% else %}
+        <div class="no-results">
+            {% if query %}
+                <p>No results found for "{{ query }}"</p>
+            {% else %}
+                <p>Enter a search query to find documents</p>
+            {% endif %}
+        </div>
+    {% endif %}
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+    const searchInput = document.getElementById('search-input');
+    const suggestionsContainer = document.getElementById('spelling-suggestions');
+    let typingTimer;
+    const doneTypingInterval = 300; // Reduced for more responsive feel
+    let contextMenu = null;
+    
+    // Check spelling as user types
+    searchInput.addEventListener('input', function() {
+        clearTimeout(typingTimer);
+        
+        if (searchInput.value) {
+            typingTimer = setTimeout(checkSpelling, doneTypingInterval);
+        } else {
+            suggestionsContainer.innerHTML = '';
+        }
+    });
+    
+    // Close context menu when clicking elsewhere
+    document.addEventListener('click', function() {
+        if (contextMenu) {
+            contextMenu.remove();
+            contextMenu = null;
+        }
+    });
+    
+    function checkSpelling() {
+        const words = searchInput.value.split(/\s+/).filter(word => word.length > 2);
+        
+        if (!words.length) return;
+        
+        suggestionsContainer.innerHTML = '';
+        
+        const processedWords = new Set();
+        
+        words.forEach(word => {
+            if (processedWords.has(word)) return;
+            processedWords.add(word);
+            
+            fetch(`/check_spelling?word=${encodeURIComponent(word)}`)
+                .then(response => response.json())
+                .then(data => {
+                    // Only process if the word is actually misspelled
+                    if (!data.isCorrect) {
+                        const wordSpan = document.createElement('span');
+                        wordSpan.textContent = word;
+                        wordSpan.className = 'misspelled';
+                        wordSpan.dataset.originalWord = word;
+                        
+                        // Add tooltip for suggestions
+                        const tooltip = document.createElement('span');
+                        tooltip.className = 'spelling-tooltip';
+                        tooltip.textContent = data.suggestions.length ? 
+                            `Did you mean: ${data.suggestions.join(', ')}` : 
+                            'No suggestions available';
+                        wordSpan.appendChild(tooltip);
+                        
+                        // Show tooltip on hover
+                        wordSpan.addEventListener('mouseenter', function() {
+                            tooltip.style.display = 'block';
+                        });
+                        
+                        wordSpan.addEventListener('mouseleave', function() {
+                            tooltip.style.display = 'none';
+                        });
+                        
+                        // Add context menu for suggestions
+                        wordSpan.addEventListener('contextmenu', function(e) {
+                            e.preventDefault();
+                            
+                            // Remove existing context menu if any
+                            if (contextMenu) {
+                                contextMenu.remove();
+                            }
+                            
+                            contextMenu = document.createElement('div');
+                            contextMenu.className = 'context-menu';
+                            
+                            // Add auto-correct option if suggestions are available
+                            if (data.suggestions.length) {
+                                const autoCorrectItem = document.createElement('div');
+                                autoCorrectItem.className = 'menu-item auto-correct';
+                                autoCorrectItem.innerHTML = `
+                                    <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 11l3 3L22 4"></path><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"></path></svg>
+                                    Auto-correct to "${data.suggestions[0]}"
+                                `;
+                                autoCorrectItem.addEventListener('click', function(e) {
+                                    e.stopPropagation();
+                                    searchInput.value = searchInput.value.replace(word, data.suggestions[0]);
+                                    contextMenu.remove();
+                                    contextMenu = null;
+                                    checkSpelling();
+                                });
+                                contextMenu.appendChild(autoCorrectItem);
+                                
+                                // Add separator
+                                const separator1 = document.createElement('div');
+                                separator1.className = 'menu-separator';
+                                contextMenu.appendChild(separator1);
+                            }
+                            
+                            // Add suggestions
+                            if (data.suggestions.length) {
+                                const suggestionsTitle = document.createElement('div');
+                                suggestionsTitle.className = 'menu-title';
+                                suggestionsTitle.textContent = 'All suggestions:';
+                                contextMenu.appendChild(suggestionsTitle);
+                                
+                                data.suggestions.forEach(suggestion => {
+                                    const item = document.createElement('div');
+                                    item.className = 'menu-item';
+                                    item.textContent = suggestion;
+                                    item.addEventListener('click', function(e) {
+                                        e.stopPropagation();
+                                        searchInput.value = searchInput.value.replace(word, suggestion);
+                                        contextMenu.remove();
+                                        contextMenu = null;
+                                        checkSpelling();
+                                    });
+                                    contextMenu.appendChild(item);
+                                });
+                            } else {
+                                const item = document.createElement('div');
+                                item.className = 'menu-item disabled';
+                                item.textContent = 'No suggestions';
+                                contextMenu.appendChild(item);
+                            }
+                            
+                            // Add option to add to dictionary if logged in
+                            if ({{ 'true' if session.user_id else 'false' }}) {
+                                const separator = document.createElement('div');
+                                separator.className = 'menu-separator';
+                                contextMenu.appendChild(separator);
+                                
+                                const addItem = document.createElement('div');
+                                addItem.className = 'menu-item add-to-dictionary';
+                                addItem.innerHTML = `
+                                    <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline><line x1="12" y1="18" x2="12" y2="12"></line><line x1="9" y1="15" x2="15" y2="15"></line></svg>
+                                    Add to dictionary
+                                `;
+                                addItem.addEventListener('click', function(e) {
+                                    e.stopPropagation();
+                                    fetch('/add_custom_word', {
+                                        method: 'POST',
+                                        headers: {
+                                            'Content-Type': 'application/json',
+                                        },
+                                        body: JSON.stringify({ word: word })
+                                    })
+                                    .then(response => response.json())
+                                    .then(data => {
+                                        if (data.success) {
+                                            wordSpan.classList.remove('misspelled');
+                                            tooltip.remove();
+                                            
+                                            // Show feedback
+                                            const feedback = document.createElement('div');
+                                            feedback.className = 'spelling-feedback';
+                                            feedback.textContent = `"${word}" added to your dictionary`;
+                                            document.body.appendChild(feedback);
+                                            
+                                            setTimeout(() => {
+                                                feedback.style.opacity = '0';
+                                                setTimeout(() => feedback.remove(), 500);
+                                            }, 2000);
+                                            
+                                            contextMenu.remove();
+                                            contextMenu = null;
+                                        }
+                                    });
+                                });
+                                contextMenu.appendChild(addItem);
+                            }
+                            
+                            // Position and show menu
+                            contextMenu.style.left = e.pageX + 'px';
+                            contextMenu.style.top = e.pageY + 'px';
+                            document.body.appendChild(contextMenu);
+                            
+                            // Ensure menu stays within viewport
+                            const rect = contextMenu.getBoundingClientRect();
+                            if (rect.right > window.innerWidth) {
+                                contextMenu.style.left = (e.pageX - rect.width) + 'px';
+                            }
+                            if (rect.bottom > window.innerHeight) {
+                                contextMenu.style.top = (e.pageY - rect.height) + 'px';
+                            }
+                            
+                            // Prevent default context menu
+                            return false;
+                        });
+                        
+                        suggestionsContainer.appendChild(wordSpan);
+                        suggestionsContainer.appendChild(document.createTextNode(' '));
+                    }
+                });
+        });
+    }
+    
+    // Run spell check on page load if there's a query
+    if (searchInput.value) {
+        checkSpelling();
+    }
+});
+</script>
+<style>
+    .misspelled {
+        text-decoration: wavy underline #ef4444;
+        position: relative;
+        cursor: context-menu;
+    }
+    
+    .spelling-tooltip {
+        position: absolute;
+        bottom: 100%;
+        left: 50%;
+        transform: translateX(-50%);
+        background-color: #1f2937;
+        color: white;
+        padding: 4px 8px;
+        border-radius: 4px;
+        font-size: 12px;
+        white-space: nowrap;
+        display: none;
+        z-index: 100;
+    }
+    
+    .spelling-tooltip::after {
+        content: '';
+        position: absolute;
+        top: 100%;
+        left: 50%;
+        transform: translateX(-50%);
+        border-width: 4px;
+        border-style: solid;
+        border-color: #1f2937 transparent transparent transparent;
+    }
+    
+    .context-menu {
+        position: absolute;
+        background-color: white;
+        border: 1px solid #e5e7eb;
+        border-radius: 4px;
+        box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+        z-index: 1000;
+        min-width: 180px;
+        max-width: 250px;
+        overflow: hidden;
+    }
+    
+    .menu-title {
+        padding: 8px 12px;
+        font-size: 12px;
+        font-weight: 600;
+        color: #6b7280;
+        background-color: #f9fafb;
+    }
+    
+    .menu-item {
+        padding: 8px 12px;
+        cursor: pointer;
+        transition: background-color 0.2s;
+        display: flex;
+        align-items: center;
+        gap: 8px;
+    }
+    
+    .menu-item:hover {
+        background-color: #f3f4f6;
+    }
+    
+    .menu-item.disabled {
+        color: #9ca3af;
+        cursor: default;
+    }
+    
+    .menu-separator {
+        height: 1px;
+        background-color: #e5e7eb;
+        margin: 4px 0;
+    }
+    
+    .add-to-dictionary {
+        color: #3b82f6;
+    }
+    
+    .auto-correct {
+        color: #10b981;
+        font-weight: 500;
+    }
+    
+    .spelling-feedback {
+        position: fixed;
+        bottom: 20px;
+        left: 50%;
+        transform: translateX(-50%);
+        background-color: #10b981;
+        color: white;
+        padding: 8px 16px;
+        border-radius: 4px;
+        font-size: 14px;
+        box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+        transition: opacity 0.5s;
+        z-index: 1000;
+    }
+</style>
+{% endblock %}

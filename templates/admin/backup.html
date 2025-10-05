@@ -1,0 +1,238 @@
+{% extends 'layout.html' %}
+
+{% block title %}Database Backup{% endblock %}
+
+{% block content %}
+<div class="admin-backup">
+    <div class="page-header">
+        <h1>
+            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="header-icon"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="17 8 12 3 7 8"></polyline><line x1="12" y1="3" x2="12" y2="15"></line></svg>
+            Database Backup
+        </h1>
+    </div>
+    
+    <div class="backup-options">
+        <div class="card">
+            <div class="card-header">
+                <h2>Create Backup</h2>
+            </div>
+            <div class="card-content">
+                <p>Create a backup of the database and all documents. This will generate a ZIP file containing the database and all uploaded documents.</p>
+                <form action="{{ url_for('admin_create_backup') }}" method="post">
+                    <button type="submit" class="btn btn-primary">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="7 10 12 15 17 10"></polyline><line x1="12" y1="15" x2="12" y2="3"></line></svg>
+                        Create Backup
+                    </button>
+                </form>
+            </div>
+        </div>
+        
+        <div class="card">
+            <div class="card-header">
+                <h2>Import Backup</h2>
+            </div>
+            <div class="card-content">
+                <p>Import a previously created backup. This will replace the current database and documents.</p>
+                <div class="warning-box">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"></path><line x1="12" y1="9" x2="12" y2="13"></line><line x1="12" y1="17" x2="12.01" y2="17"></line></svg>
+                    <p>Warning: This will overwrite all existing data. Make sure to create a backup first.</p>
+                </div>
+                <form action="{{ url_for('admin_import_backup') }}" method="post" enctype="multipart/form-data">
+                    <div class="form-group">
+                        <label for="backup-file">Select Backup File (.zip)</label>
+                        <input type="file" id="backup-file" name="backup_file" accept=".zip" required>
+                    </div>
+                    <button type="submit" class="btn btn-danger">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="17 8 12 3 7 8"></polyline><line x1="12" y1="3" x2="12" y2="15"></line></svg>
+                        Import Backup
+                    </button>
+                </form>
+            </div>
+        </div>
+    </div>
+    
+    <div class="card">
+        <div class="card-header">
+            <h2>Backup History</h2>
+        </div>
+        <div class="card-content">
+            {% if backups %}
+                <div class="table-container">
+                    <table class="admin-table">
+                        <thead>
+                            <tr>
+                                <th>Filename</th>
+                                <th>Created</th>
+                                <th>Size</th>
+                                <th>Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for backup in backups %}
+                                <tr>
+                                    <td>{{ backup.filename }}</td>
+                                    <td>{{ backup.created }}</td>
+                                    <td>{{ backup.size }}</td>
+                                    <td class="actions">
+                                        <a href="{{ url_for('admin_download_backup', filename=backup.filename) }}" class="btn btn-icon" title="Download Backup">
+                                            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="7 10 12 15 17 10"></polyline><line x1="12" y1="15" x2="12" y2="3"></line></svg>
+                                        </a>
+                                        <button class="btn btn-icon delete-backup-btn" data-filename="{{ backup.filename }}" title="Delete Backup">
+                                            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></svg>
+                                        </button>
+                                    </td>
+                                </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            {% else %}
+                <div class="empty-state">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="17 8 12 3 7 8"></polyline><line x1="12" y1="3" x2="12" y2="15"></line></svg>
+                    <p>No backups have been created yet.</p>
+                </div>
+            {% endif %}
+        </div>
+    </div>
+</div>
+
+<div id="delete-backup-modal" class="modal">
+    <div class="modal-content">
+        <div class="modal-header">
+            <h2>
+                <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></svg>
+                Delete Backup
+            </h2>
+            <button class="close-modal">&times;</button>
+        </div>
+        <div class="modal-body">
+            <div class="warning-icon">
+                <svg xmlns="http://www.w3.org/2000/svg" width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"></path><line x1="12" y1="9" x2="12" y2="13"></line><line x1="12" y1="17" x2="12.01" y2="17"></line></svg>
+            </div>
+            <p>Are you sure you want to delete this backup? This action cannot be undone.</p>
+            
+            <div class="form-actions">
+                <button type="button" class="btn btn-outline close-modal">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"></circle><line x1="15" y1="9" x2="9" y2="15"></line><line x1="9" y1="9" x2="15" y2="15"></line></svg>
+                    Cancel
+                </button>
+                <button type="button" id="confirm-delete-backup" class="btn btn-danger">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></svg>
+                    Delete
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+    .backup-options {
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+        gap: 1.5rem;
+        margin-bottom: 2rem;
+    }
+    
+    .card-header {
+        padding: 1rem 1.5rem;
+        border-bottom: 1px solid var(--border-color);
+    }
+    
+    .card-header h2 {
+        margin-bottom: 0;
+        font-size: 1.25rem;
+    }
+    
+    .card-content {
+        padding: 1.5rem;
+    }
+    
+    .warning-box {
+        display: flex;
+        align-items: flex-start;
+        gap: 0.75rem;
+        padding: 1rem;
+        background-color: #fff5f5;
+        border: 1px solid #fed7d7;
+        border-radius: var(--radius);
+        margin-bottom: 1.5rem;
+    }
+    
+    .warning-box svg {
+        color: #e53e3e;
+        flex-shrink: 0;
+    }
+    
+    .warning-box p {
+        margin-bottom: 0;
+        font-size: 0.875rem;
+        color: #e53e3e;
+    }
+    
+    input[type="file"] {
+        display: block;
+        width: 100%;
+        padding: 0.5rem;
+        margin-bottom: 1rem;
+        border: 1px solid var(--border-color);
+        border-radius: var(--radius);
+    }
+</style>
+
+{% endblock %}
+
+{% block scripts %}
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        // Modal functionality
+        const modal = document.getElementById('delete-backup-modal');
+        const closeButtons = document.querySelectorAll('.close-modal');
+        const deleteButtons = document.querySelectorAll('.delete-backup-btn');
+        const confirmDeleteBtn = document.getElementById('confirm-delete-backup');
+        let backupToDelete = null;
+        
+        // Close modals
+        closeButtons.forEach(button => {
+            button.addEventListener('click', function() {
+                modal.classList.remove('show');
+            });
+        });
+        
+        // Close modal when clicking outside
+        window.addEventListener('click', function(event) {
+            if (event.target === modal) {
+                modal.classList.remove('show');
+            }
+        });
+        
+        // Delete backup functionality
+        deleteButtons.forEach(button => {
+            button.addEventListener('click', function() {
+                backupToDelete = this.dataset.filename;
+                modal.classList.add('show');
+            });
+        });
+        
+        confirmDeleteBtn.addEventListener('click', function() {
+            if (!backupToDelete) return;
+            
+            fetch(`/admin/backup/delete/${backupToDelete}`, {
+                method: 'DELETE'
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    // Reload page to show updated backup list
+                    window.location.reload();
+                } else {
+                    alert(data.error || 'Failed to delete backup');
+                }
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                alert('An unexpected error occurred');
+            });
+        });
+    });
+</script>
+{% endblock %}

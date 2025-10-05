@@ -1,0 +1,11 @@
+🧠 What is Normalization in DBMS?
+Normalization is a process in database design used to organize data efficiently, eliminate data redundancy, and ensure data integrity.
+
+It breaks large, complex tables into smaller, more manageable tables and defines relationships between them using keys.
+
+🎯 Goals of Normalization
+Remove redundant data (e.g., repeating groups, duplicate values)
+
+Ensure data dependencies make sense (data is stored logically)
+
+Improve data integrity and efficiency
